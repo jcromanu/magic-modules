@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/hashicorp/terraform-provider-google/google/registry"
-	rmClient "github.com/hashicorp/terraform-provider-google/google/services/resourcemanager/client"
 	"github.com/hashicorp/terraform-provider-google/google/tpgresource"
 	transport_tpg "github.com/hashicorp/terraform-provider-google/google/transport"
 
@@ -57,19 +56,13 @@ func dataSourceGoogleComputeSnapshotRead(d *schema.ResourceData, meta interface{
 			return err
 		}
 
-		projectGetCall := rmClient.NewClient(config, userAgent).Projects.Get(project)
-
+		billingProject := ""
 		if config.UserProjectOverride {
-			billingProject := project
-
-			// err == nil indicates that the billing_project value was found
 			if bp, err := tpgresource.GetBillingProject(d, config); err == nil {
 				billingProject = bp
 			}
-			projectGetCall.Header().Add("X-Goog-User-Project", billingProject)
 		}
 
-		//handling the pagination locally
 		allSnapshots := make([]map[string]interface{}, 0)
 		token := ""
 		for paginate := true; paginate; {
@@ -81,7 +74,7 @@ func dataSourceGoogleComputeSnapshotRead(d *schema.ResourceData, meta interface{
 			resp, err := transport_tpg.SendRequest(transport_tpg.SendRequestOptions{
 				Config:    config,
 				Method:    "GET",
-				Project:   project,
+				Project:   billingProject,
 				RawURL:    url,
 				UserAgent: userAgent,
 			})
